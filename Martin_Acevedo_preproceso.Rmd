@@ -1,0 +1,139 @@
+---
+title: "Preprocesamiento Titanic"
+author: "Javier Martín Acevedo"
+date: "2026-03-23"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## 1. Fichero de datos
+Cargad el fichero titanic_dataset.xlsx y examinad el tipo de datos que contiene.
+A continuación, verificad la consistencia del identificador. Debe existir un único 
+identificador para cada pasajero. De no ser así, corregid los datos adecuadamente. 
+Si el identificador está repetido pero los datos son correctos, asignad un identificador único.
+
+#### Cargamos librerías necesarias
+```{r, message=FALSE}
+library(readxl)
+library(dplyr)
+```
+
+#### Cargamos el dataset Titanic
+```{r}
+titanic <- read_excel("titanic_dataset.xlsx")
+```
+
+#### Visualizamos las primeras filas con head
+```{r}
+head(titanic)
+```
+
+#### Examinamos la estructura
+```{r}
+str(titanic)
+```
+
+#### Comprobamos si PassengerId es único
+```{r}
+length(unique(titanic$PassengerId)) == nrow(titanic)
+```
+
+#### Identificamos los PassengerId duplicados
+```{r}
+duplicados <- titanic %>%
+  group_by(PassengerId) %>%
+  filter(n() > 1)
+
+duplicados
+```
+
+#### Eliminamos filas duplicadas (mismo ID y mismos datos)
+```{r}
+titanic <- titanic %>%
+  distinct()
+```
+
+#### Para los ID's duplicados restantes reasignamos ID's únicos a partir del máximo existente
+```{r}
+max_id <- max(titanic$PassengerId)
+idx_dup <- which(duplicated(titanic$PassengerId))
+titanic$PassengerId[idx_dup] <- seq(max_id + 1, max_id + length(idx_dup))
+```
+
+#### Verificamos todo lo anterior
+```{r}
+length(unique(titanic$PassengerId)) == nrow(titanic)
+nrow(titanic)
+```
+
+## 2. Variables cuantitativas
+Revisad variables cuantitativas, valores perdidos y posibles formatos erróneos.
+En primer lugar, si la variable no se ha interpretado como numérica, debéis realizar la conversión oportuna.
+A continuación, examinad los valores, identificando posibles valores erróneos. En el caso de valores erróneos,
+sustituidlos por NA. Si hay valores vacíos, sustituidlos por NA también. Más adelante revisaremos si existen
+valores extremos (outliers).
+Para estructurar este apartado, realizad un subapartado para cada variable cuantitativa. Podéis acompañar
+el análisis de gráficos si lo consideráis oportuno.
+
+### 2.1 Age
+### 2.2 SibSp
+### 2.3 Parch
+### 2.4 Fare
+### 2.5 Family size
+Cread una variable FamS (FamilySize) (tamaño familiar) a bordo, que contenga el total de SibSp y Parch
+(+1 para incluir el propio pasajero). Mostrad su distribución gráficamente.
+
+## 3. Variables categóricas
+Revisad los valores de las variables categóricas y realizad las transformaciones oportunas. Organizad esta
+sección en distintas subsecciones, una para cada variable.
+
+### 3.1 Survived
+### 3.2 Pclass
+### 3.3 Sex
+### 3.4 Embarked
+
+## 4. Variables de tipo texto
+Revisad los valores de las variables de tipo texto. Podéis agrupar todo el proceso en un único chunk de
+código.
+
+## 5. Valores extremo
+En este apartado revisamos valores extremos (outliers) en dos variables de interés: edad y tarifa.
+
+### 5.1 Age
+Visualizad la distribución de Age. Identificad posibles valores extremos e interpretad. Al visualizar la distribución, reflexionad si se tratan de valores erróneos o extremos. Si es necesario, sustituid por NA. Justificad
+vuestra elección. Más adelante se realizará la imputación.
+
+### 5.2 Fare
+Revisad los posibles outliers en la tarifa (Fare). Visualizad la distribución y reflexionad si se tratan de valores
+erróneos o extremos. En caso de valores erróneos, sustituid por NA. Justificad vuestra elección. No hace falta
+realizar la imputación.
+A continuación, mostrad la lista de pasajeros con las 10 tarifas de tiquets más altas.
+
+## 6. Correlaciones
+En este apartado calcularemos correlaciones entre variables cuantitativas y su relación con la supervivencia.
+Estructurad este apartado en los subapartados siguientes.
+
+### 6.1 Matriz de correlaciones
+Calculad una matriz de correlaciones entre variables cuantitativas, incluyendo también FamS y Survived (en
+valor numérico). Visualizadla e interpretad el resultado.
+
+### 6.2 Variables más correlacionadas con supervivencia
+Mostrad una tabla con las variables ordenadas de más a menos correlación con Survived (numérica).
+
+## 7. Imputación
+Revisad qué variables presentan valores perdidos. A modo ilustrativo, imputad Age (edad) usando kNN
+(librería VIM), tomando como predictores el resto de variables numéricas u ordinales y un tamaño de vecinos
+igual a 5.
+Mostrad los valores imputados en una tabla.
+
+## 8. Tabla resumen
+Calculad medidas de tendencia central y dispersión (robustas y no robustas) para variables cuantitativas y
+presentad dos tablas:
+
+Tendencia central: media y mediana
+
+Dispersión: desviación estándar y MAD (desviación absoluta respecto de la mediana)
+
+Agrupad por Pclass y Sex y mostrad las tablas.
+Finalmente, guardad los cambios realizados en un fichero con nombre titanic_dataset_clean.xlsx.
