@@ -13,55 +13,58 @@ A continuación, verificad la consistencia del identificador. Debe existir un ú
 identificador para cada pasajero. De no ser así, corregid los datos adecuadamente. 
 Si el identificador está repetido pero los datos son correctos, asignad un identificador único.
 
-#### Cargamos librerías necesarias
+Cargamos librerías necesarias
 ```{r, message=FALSE}
 library(readxl)
 library(dplyr)
+library(kableExtra)
 ```
 
-#### Cargamos el dataset Titanic
+Cargamos el dataset Titanic
 ```{r}
 titanic <- read_excel("titanic_dataset.xlsx")
 ```
 
-#### Visualizamos las primeras filas con head
+Visualizamos las primeras filas
 ```{r}
-head(titanic)
+kable(head(titanic), caption = "Primeras filas del dataset") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE)
 ```
 
-#### Examinamos la estructura
+Examinamos la estructura
 ```{r}
 str(titanic)
 ```
 
-#### Comprobamos si PassengerId es único
+Comprobamos si PassengerId es único
 ```{r}
 length(unique(titanic$PassengerId)) == nrow(titanic)
 ```
 
-#### Identificamos los PassengerId duplicados
+Identificamos los PassengerId duplicados
 ```{r}
 duplicados <- titanic %>%
   group_by(PassengerId) %>%
   filter(n() > 1)
 
-duplicados
+kable(duplicados, caption = "Registros con PassengerId duplicado") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE)
 ```
 
-#### Eliminamos filas duplicadas (mismo ID y mismos datos)
+Eliminamos filas duplicadas (mismo ID y mismos datos)
 ```{r}
 titanic <- titanic %>%
   distinct()
 ```
 
-#### Para los ID's duplicados restantes reasignamos ID's únicos a partir del máximo existente
+Para los ID's duplicados restantes reasignamos ID's únicos a partir del máximo existente
 ```{r}
 max_id <- max(titanic$PassengerId)
 idx_dup <- which(duplicated(titanic$PassengerId))
 titanic$PassengerId[idx_dup] <- seq(max_id + 1, max_id + length(idx_dup))
 ```
 
-#### Verificamos todo lo anterior
+Verificamos todo lo anterior
 ```{r}
 length(unique(titanic$PassengerId)) == nrow(titanic)
 nrow(titanic)
@@ -77,25 +80,196 @@ Para estructurar este apartado, realizad un subapartado para cada variable cuant
 el análisis de gráficos si lo consideráis oportuno.
 
 ### 2.1 Age
+Exploramos la variable Age y nos aseguramos que sea de tipo cuantitativa discreta
+
+```{r}
+summary(titanic$Age)
+```
+Por lo tanto procedemos a convertirla en una variable de tipo entero:
+
+```{r}
+titanic$Age <- as.integer(round(titanic$Age, 0))
+summary(titanic$Age)
+```
+```{r}
+barplot(table(titanic$Age),
+        main = "Distribución de Age (Edades)",
+        xlab = "Edad",
+        ylab = "Frecuencia",
+        col = "steelblue",
+        border = NA)
+
+```
+Como podemos observar, los valores se encuentran en rangos posibles: 0 años corresponde a un bebé de aproximadamente 2 meses, y 93 años es una edad avanzada pero plausible. Se detectan 263 valores perdidos (NA).
+
 ### 2.2 SibSp
+Exploramos la variable SibSp y nos aseguramos que sea de tipo cuantitativa discreta
+
+```{r}
+titanic$SibSp <- round(titanic$SibSp, 0)
+summary(titanic$SibSp)
+```
+```{r}
+barplot(table(titanic$SibSp),
+        main = "Distribución de SibSp\n(Nº de Hermanos/Cónyuges)",
+        xlab = "Hermanos/Cónyuges",
+        ylab = "Frecuencia",
+        col = "steelblue",
+        border = NA)
+```
+
+La variable SibSp se encuentra correctamente tipada como cuantitativa discreta, representando el número de hermanos/as o cónyuges a bordo. No presenta valores perdidos ni inconsistencias. El rango observado (0–8) es plausible para el contexto histórico del Titanic. Dado que se trata de una variable discreta, únicamente se verifica que sea numérica y se redondea al entero más cercano, aunque en este caso ya se encontraba en dicho formato.
+
 ### 2.3 Parch
+Exploramos la variable Parch y nos aseguramos que sea de tipo cuantitativa discreta
+
+```{r}
+titanic$Parch <- round(titanic$Parch, 0)
+summary(titanic$Parch)
+```
+```{r}
+barplot(table(titanic$Parch),
+        main = "Distribución de Parch\n(Nº de Padres/Madres/Hijos)",
+        xlab = "Padres/Madres/Hijos",
+        ylab = "Frecuencia",
+        col = "steelblue",
+        border = NA)
+```
+
+La variable Parch representa el número de padres/madres e hijos a bordo, y se comporta como una variable cuantitativa discreta. No presenta valores perdidos ni inconsistencias. El rango observado (0–9) es plausible en el contexto de familias numerosas de principios del siglo XX. Dado que se requiere que la variable sea entera, se verifica su tipado y se redondea al entero más cercano, aunque en este caso ya se encontraba correctamente definida.
+
 ### 2.4 Fare
+Exploramos la variable Fare y nos aseguramos que sea de tipo numérica continua
+
+```{r}
+summary(titanic$Fare)
+```
+
+Al examinar la variable observamos que ha sido interpretada como character en lugar de forma numérica, por lo que realizamos la conversión:
+
+```{r}
+titanic$Fare <- as.numeric(gsub(",", ".", titanic$Fare))
+titanic$Fare <- round(titanic$Fare, 2)
+summary(titanic$Fare)
+```
+```{r}
+hist(titanic$Fare, main = "Distribución de Fare (Tarifa)", xlab = "Tarifa", col = "steelblue")
+```
+
+La variable Fare fue inicialmente interpretada como texto (character), por lo que se procedió a sustituir la coma decimal por punto y convertirla a formato numérico. Posteriormente, se redondeó a dos decimales, tal como requieren las variables continuas.
+
+El resumen estadístico resultante muestra un rango de valores entre 0.00 y 512.33. El valor mínimo (0.00) es plausible, ya que algunos pasajeros pudieron haber viajado con billetes gratuitos o en condiciones especiales. Durante la conversión se generó un único valor perdido (NA), correspondiente a un registro vacío en el dataset original. No se detectan valores negativos ni inconsistentes, por lo que la variable presenta un rango coherente con las tarifas históricas del Titanic.
+
 ### 2.5 Family size
 Cread una variable FamS (FamilySize) (tamaño familiar) a bordo, que contenga el total de SibSp y Parch
 (+1 para incluir el propio pasajero). Mostrad su distribución gráficamente.
+
+```{r}
+# Fams = SibSp + Parch + 1
+titanic$FamS <- titanic$SibSp + titanic$Parch + 1
+summary(titanic$FamS)
+barplot(table(titanic$FamS),
+        main = "Distribución de FamilySize",
+        xlab = "Tamaño familiar",
+        ylab = "Freq",
+        col = "steelblue")
+```
+
+Se crea la variable FamS como la suma de SibSp y Parch + 1. Los valores oscilan entre 1 (viaja solo) y 11. La mediana (1) indica que la mayoría de pasajeros viajaban solos. 
 
 ## 3. Variables categóricas
 Revisad los valores de las variables categóricas y realizad las transformaciones oportunas. Organizad esta
 sección en distintas subsecciones, una para cada variable.
 
 ### 3.1 Survived
+Exploramos la variable Survived y nos aseguramos que sea de tipo cualitativa binaria (Yes/No)
+
+```{r}
+summary(titanic$Survived)
+table(titanic$Survived)
+```
+Al revisar la variable Survived nos damos cuenta de que existen valores imposibles como -2, -1 y 2 cuando lo esperable son valores de entre 0 y 1. (En base a si el pasajero sobrevive o no). Procedemos por tanto a convertir los valores imposibles a NA.
+
+```{r}
+titanic$Survived[!titanic$Survived %in% c(0, 1)] <- NA
+titanic$Survived <- ifelse(titanic$Survived == 1, "Yes", "No")
+titanic$Survived <- factor(titanic$Survived, levels = c("No", "Yes"))
+summary(titanic$Survived)
+```
+Finalmente tenemos 3 valores perdidos (NA), y revisando los datos obtenidos podemos decir que la mayoría no sobrevivió, alrededor de 2 de cada 3 personas fallecieron en el hundimiento.
+
 ### 3.2 Pclass
+Exploramos la variable Pclass y nos aseguramos que sea de tipo ordinal
+
+```{r}
+summary(titanic$Pclass)
+table(titanic$Pclass)
+```
+La variable Pclass representa la clase del billete (1ª, 2ª o 3ª) y debe ser tratada como una variable ordinal. En la exploración inicial se detectaron tres valores imposibles (22, 33 y 101), que serán sustituidos por valores perdidos (NA), ya que no corresponden a ninguna categoría válida.
+```{r}
+titanic$Pclass[!titanic$Pclass %in% c(1, 2, 3)] <- NA
+titanic$Pclass <- factor(titanic$Pclass,
+                         levels = c(1, 2, 3),
+                         ordered = TRUE)
+```
+```{r}
+summary(titanic$Pclass)
+table(titanic$Pclass)
+```
+Una vez depurada, la variable se transformó en un factor ordinal con niveles ordenados (1 < 2 < 3). Tras la limpieza, se obtienen 3 valores perdidos (NA) y se observa que la mayoría de los pasajeros viajaban en tercera clase.
+
 ### 3.3 Sex
+Exploramos la variable Sex y nos aseguramos que sea de tipo categórico (factor) y que contenga valores "Female", "Male".
+
+```{r}
+table(titanic$Sex)
+```
+
+La variable Sex presenta múltiples variantes textuales para representar los valores “Female” y “Male” (por ejemplo: F, Fem, female, M, male, Male). Para garantizar la consistencia y cumplir con los criterios de preprocesamiento, se transformarán todas las entradas a minúsculas, se unificarán las abreviaturas y se recodificarán las variable como un factor con dos niveles: “Female” y “Male”.
+
+```{r}
+titanic$Sex <- tolower(titanic$Sex)
+titanic$Sex[titanic$Sex %in% c("f", "fem", "female")] <- "Female"
+titanic$Sex[titanic$Sex %in% c("m", "male")] <- "Male"
+titanic$Sex <- factor(titanic$Sex, levels = c("Female", "Male"))
+table(titanic$Sex)
+```
+Tras la limpieza, la variable queda correctamente tipada como categórica y sin valores inconsistentes ni valores perdidos (NA). 
+
 ### 3.4 Embarked
+Exploramos la variable Embarked contenga el nombre completo: Cherbourg (C)/Queenstown (Q)/Southampton
+(S).
+
+```{r}
+table(titanic$Embarked)
+```
+
+La variable Embarked presenta distintas variantes textuales para los puertos de embarque (C, c, Q, q, S, s). Para garantizar la consistencia y cumplir con los criterios de preprocesamiento, se transformarán todas las entradas a minúsculas y se sustituirán los códigos por los nombres completos de los puertos: “Cherbourg”, “Queenstown” y “Southampton”.
+
+```{r}
+titanic$Embarked <- tolower(titanic$Embarked)
+titanic$Embarked[titanic$Embarked == "c"] <- "Cherbourg"
+titanic$Embarked[titanic$Embarked == "q"] <- "Queenstown"
+titanic$Embarked[titanic$Embarked == "s"] <- "Southampton"
+titanic$Embarked <- factor(titanic$Embarked, levels = c("Cherbourg", "Queenstown", "Southampton"))
+summary(titanic$Embarked)
+```
+Finalmente, la variable se recodificó como un factor con tres niveles. Tras la limpieza se detectan 2 valores perdidos (NA), correspondientes a registros sin puerto de embarque registrado.
 
 ## 4. Variables de tipo texto
 Revisad los valores de las variables de tipo texto. Podéis agrupar todo el proceso en un único chunk de
 código.
+
+Las variables Name, Ticket y Cabin son de tipo texto. Según los criterios de preprocesamiento, únicamente deben eliminarse los espacios en blanco al inicio y al final de cada cadena. Para ello, aplicaremos la función trimws() y nos aseguraremos que las tres variables permanezcan en formato carácter. 
+
+```{r}
+titanic$Name <- trimws(as.character(titanic$Name))
+titanic$Ticket <- trimws(as.character(titanic$Ticket))
+titanic$Cabin <- trimws(as.character(titanic$Cabin))
+summary(titanic[, c("Name", "Ticket", "Cabin")])
+```
+Tras la limpieza, las tres variables se encuentran correctamente tipadas y sin espacios innecesarios.
+
 
 ## 5. Valores extremo
 En este apartado revisamos valores extremos (outliers) en dos variables de interés: edad y tarifa.
@@ -104,11 +278,48 @@ En este apartado revisamos valores extremos (outliers) en dos variables de inter
 Visualizad la distribución de Age. Identificad posibles valores extremos e interpretad. Al visualizar la distribución, reflexionad si se tratan de valores erróneos o extremos. Si es necesario, sustituid por NA. Justificad
 vuestra elección. Más adelante se realizará la imputación.
 
+```{r}
+boxplot(titanic$Age,
+        main = "Boxplot de Age",
+        ylab = "Edad",
+        col = "steelblue")
+
+hist(titanic$Age,
+     main = "Distribución de Age",
+     xlab = "Edad",
+     col = "steelblue")
+```
+
+Aunque existen valores extremos (bebés y personas muy mayores), todos ellos son plausibles en el contexto del Titanic. Por tanto, no se sustituyen por NA, ya que no se consideran errores sino valores reales.
+
 ### 5.2 Fare
 Revisad los posibles outliers en la tarifa (Fare). Visualizad la distribución y reflexionad si se tratan de valores
 erróneos o extremos. En caso de valores erróneos, sustituid por NA. Justificad vuestra elección. No hace falta
-realizar la imputación.
+realizar la imputación. 
 A continuación, mostrad la lista de pasajeros con las 10 tarifas de tiquets más altas.
+
+```{r}
+boxplot(titanic$Fare,
+        main = "Boxplot de Fare",
+        ylab = "Tarifa",
+        col = "steelblue")
+
+hist(titanic$Fare,
+     main = "Distribución de Fare",
+     xlab = "Tarifa",
+     col = "steelblue")
+```
+
+Los valores altos de Fare parecen ser valores reales que deben representan billetes de lujo de primera clase. Por tanto, no considero que deban eliminarse ni sustituirse por NA.
+
+A continuación podemos visualizar las 10 tarifas más altas:
+
+```{r}
+top_fares <- titanic[order(-titanic$Fare), c("Name", "Fare", "Pclass", "Sex", "Age")]
+
+kable(head(top_fares, 10), caption = "Top 10 tarifas más altas") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
 
 ## 6. Correlaciones
 En este apartado calcularemos correlaciones entre variables cuantitativas y su relación con la supervivencia.
@@ -118,8 +329,30 @@ Estructurad este apartado en los subapartados siguientes.
 Calculad una matriz de correlaciones entre variables cuantitativas, incluyendo también FamS y Survived (en
 valor numérico). Visualizadla e interpretad el resultado.
 
+```{r}
+titanic$Survived_num <- ifelse(titanic$Survived == "Yes", 1, 0)
+vars_num <- titanic[, c("Age", "SibSp", "Parch", "FamS", "Fare", "Survived_num")]
+cor_matrix <- cor(vars_num, use = "pairwise.complete.obs")
+corrplot::corrplot(cor_matrix, method = "color", addCoef.col = "black",tl.col = "black", number.cex = 0.7)
+```
+
+Las correlaciones con la supervivencia son en general muy bajas, lo que indica que la probabilidad de sobrevivir no depende de una relación lineal simple con ninguna variable numérica. Factores categóricos como sexo y clase (reflejados parcialmente en Fare) tienen un papel mucho más determinante.
+
 ### 6.2 Variables más correlacionadas con supervivencia
 Mostrad una tabla con las variables ordenadas de más a menos correlación con Survived (numérica).
+
+```{r}
+cor_surv <- cor_matrix[, "Survived_num"]
+cor_surv_sorted <- sort(cor_surv, decreasing = TRUE)
+
+kable(data.frame(Variable = names(cor_surv_sorted), 
+                 Correlacion = round(cor_surv_sorted, 4)),
+      caption = "Correlación de variables numéricas con Survived",
+      row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+La única variable numérica con una correlación apreciable con la supervivencia es Fare, lo que refleja la ventaja de los pasajeros de primera clase. El resto de variables presentan correlaciones muy débiles, lo que sugiere que la supervivencia depende de relaciones no lineales y de variables categóricas clave como sexo y clase social.
 
 ## 7. Imputación
 Revisad qué variables presentan valores perdidos. A modo ilustrativo, imputad Age (edad) usando kNN
@@ -127,13 +360,112 @@ Revisad qué variables presentan valores perdidos. A modo ilustrativo, imputad A
 igual a 5.
 Mostrad los valores imputados en una tabla.
 
+Comenzamos por revisar que variables presentan valores perdidos
+
+```{r}
+na_tabla <- colSums(is.na(titanic))
+na_tabla <- na_tabla[!names(na_tabla) %in% "Survived_num"]
+
+kable(data.frame(Variable = names(na_tabla),
+                 NAs = as.integer(na_tabla)),
+      caption = "Valores perdidos por variable",
+      row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+Las variables con NA relevantes para el análisis son Age, Fare, Pclass, Embarked y Survived.
+En este apartado imputamos únicamente Age, tal como solicita el enunciado.
+
+Usamos la librería VIM y tomamos como predictores todas las variables numéricas u ordinales:
+
+```{r, message=FALSE}
+library(VIM)
+titanic_knn <- kNN(
+  titanic,
+  variable = "Age",
+  k = 5,
+  dist_var = c("SibSp", "Parch", "FamS", "Fare", "Pclass", "Survived_num")
+)
+titanic_knn$Age_imp <- NULL
+```
+```{r}
+imputed_age <- titanic_knn[which(is.na(titanic$Age)), c("Name", "Age")]
+
+kable(head(imputed_age, 10),
+      caption = "Primeros 10 valores de Age imputados por kNN",
+      row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+El método kNN identifica los 5 pasajeros más similares según las variables numéricas/ordinales seleccionadas.
+
+La edad imputada es una estimación basada en esos vecinos, lo que produce valores coherentes con el perfil del pasajero.
+
+La tabla muestra únicamente los registros donde Age estaba originalmente ausente, junto con el valor imputado.
+
 ## 8. Tabla resumen
 Calculad medidas de tendencia central y dispersión (robustas y no robustas) para variables cuantitativas y
 presentad dos tablas:
-
 Tendencia central: media y mediana
-
 Dispersión: desviación estándar y MAD (desviación absoluta respecto de la mediana)
-
 Agrupad por Pclass y Sex y mostrad las tablas.
 Finalmente, guardad los cambios realizados en un fichero con nombre titanic_dataset_clean.xlsx.
+
+Comenzamos calculando las medidas de tendencia central (media y mediana) para las variables cuantitativas, agrupadas por Pclass y Sex:
+
+```{r, message=FALSE}
+library(dplyr)
+
+tendencia <- titanic_knn %>%
+  group_by(Pclass, Sex) %>%
+  summarise(
+    Age_mean     = round(mean(Age, na.rm = TRUE), 2),
+    Age_median   = median(Age, na.rm = TRUE),
+    SibSp_mean   = round(mean(SibSp), 2),
+    SibSp_median = median(SibSp),
+    Parch_mean   = round(mean(Parch), 2),
+    Parch_median = median(Parch),
+    FamS_mean    = round(mean(FamS), 2),
+    FamS_median  = median(FamS),
+    Fare_mean    = round(mean(Fare, na.rm = TRUE), 2),
+    Fare_median  = round(median(Fare, na.rm = TRUE), 2),
+    .groups = "drop"
+  )
+
+kable(tendencia, caption = "Tendencia central por Pclass y Sex") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE)
+```
+
+A continuación, calculamos las medidas de dispersión (desviación estándar y MAD) para las variables cuantitativas, agrupadas por Pclass y Sex:
+
+```{r, message=FALSE}
+dispersion <- titanic_knn %>%
+  group_by(Pclass, Sex) %>%
+  summarise(
+    Age_sd    = round(sd(Age, na.rm = TRUE), 2),
+    Age_mad   = round(mad(Age, na.rm = TRUE), 2),
+    SibSp_sd  = round(sd(SibSp), 2),
+    SibSp_mad = round(mad(SibSp), 2),
+    Parch_sd  = round(sd(Parch), 2),
+    Parch_mad = round(mad(Parch), 2),
+    FamS_sd   = round(sd(FamS), 2),
+    FamS_mad  = round(mad(FamS), 2),
+    Fare_sd   = round(sd(Fare, na.rm = TRUE), 2),
+    Fare_mad  = round(mad(Fare, na.rm = TRUE), 2),
+    .groups = "drop"
+  )
+
+kable(dispersion, caption = "Dispersión por Pclass y Sex") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE)
+```
+
+Las filas con Pclass = NA corresponden a los 3 pasajeros con clase inválida detectados en el apartado 3.2.
+
+Finalmente, guardamos el dataset limpio en un archivo Excel y en formato CSV:
+
+```{r, message=FALSE}
+library(openxlsx)
+titanic_export <- titanic_knn[, !names(titanic_knn) %in% "Survived_num"]
+write.xlsx(titanic_export, "titanic_dataset_clean.xlsx")
+write.csv(titanic_export, "titanic_dataset_clean.csv", row.names = FALSE)
+```
